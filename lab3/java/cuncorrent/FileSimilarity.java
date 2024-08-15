@@ -13,6 +13,7 @@ public class FileSimilarity {
         // Create a map to store the fingerprint for each file
         Map<String, List<Long>> fileFingerprints = new HashMap<>();
         ArrayList<SumThread> sumThreads = new ArrayList<>();
+        ArrayList<CompareThread> compareThreads = new ArrayList<>();
 
         // Calculate the fingerprint for each file
         for (String path : args) {
@@ -26,8 +27,6 @@ public class FileSimilarity {
             fileFingerprints.put(args[i], sumThreads.get(i).getChunks());
         }
 
-        System.out.println("CONMCORRENTE 1");
-
 
         // Compare each pair of files
         for (int i = 0; i < args.length; i++) {
@@ -38,28 +37,14 @@ public class FileSimilarity {
                 String file2 = args[j];
                 List<Long> fingerprint1 = fileFingerprints.get(file1);
                 List<Long> fingerprint2 = fileFingerprints.get(file2);
-                float similarityScore = similarity(fingerprint1, fingerprint2);
+                CompareThread compareThread = new CompareThread(fingerprint1, fingerprint2, file1, file2);
+                compareThread.start();
 
-                System.out.println("Similarity between " + file1 + " and " + file2 + ": " + (similarityScore * 100) + "%");
             }
 
-
+            compareThreads = new ArrayList<>();
         }
     }
-
-    // private static List<Long> fileSum(String filePath) throws IOException {
-    //     File file = new File(filePath);
-    //     List<Long> chunks = new ArrayList<>();
-    //     try (FileInputStream inputStream = new FileInputStream(file)) {
-    //         byte[] buffer = new byte[100];
-    //         int bytesRead;
-    //         while ((bytesRead = inputStream.read(buffer)) != -1) {
-    //             long sum = sum(buffer, bytesRead);
-    //             chunks.add(sum);
-    //         }
-    //     }
-    //     return chunks;
-    // }
 
     private static long sum(byte[] buffer, int length) {
         long sum = 0;
@@ -67,20 +52,6 @@ public class FileSimilarity {
             sum += Byte.toUnsignedInt(buffer[i]);
         }
         return sum;
-    }
-
-    private static float similarity(List<Long> base, List<Long> target) {
-        int counter = 0;
-        List<Long> targetCopy = new ArrayList<>(target);
-
-        for (Long value : base) {
-            if (targetCopy.contains(value)) {
-                counter++;
-                targetCopy.remove(value);
-            }
-        }
-
-        return (float) counter / base.size();
     }
 
     static class SumThread extends Thread {
@@ -109,6 +80,35 @@ public class FileSimilarity {
 
         public List<Long> getChunks() {
             return this.chunks;
+        }
+    }
+
+    static class CompareThread extends Thread {
+        private List<Long> file1;
+        private List<Long> file2;
+        private String path1;
+        private String path2;
+
+        public CompareThread(List<Long> file1, List<Long> file2, String path1, String path2) {
+            this.file1 = file1;
+            this.file2 = file2;
+            this.path1 = path1;
+            this.path2 = path2;
+        }
+
+        @Override
+        public void run() {
+            int counter = 0;
+            List<Long> targetCopy = new ArrayList<>(file2);
+
+            for (Long value : file1) {
+                if (targetCopy.contains(value)) {
+                    counter++;
+                    targetCopy.remove(value);
+                }
+            }
+
+            System.out.println("Similarity between " + path1 + " and " + path2 + ": " + ((float) counter / file1.size() * 100) + "%");
         }
     }
 }
